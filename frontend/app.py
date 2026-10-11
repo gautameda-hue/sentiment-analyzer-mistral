@@ -36,7 +36,7 @@ if st.button("Analyze Sentiment"):
 
             with st.spinner("Analyzing sentiment..."):
                 response = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
+                    model="openai/gpt-oss-120b",
                     messages=[
                         {
                             "role": "system",
@@ -64,8 +64,6 @@ if st.button("Analyze Sentiment"):
                 st.subheader("Result")
                 st.success(result)
 
-        except Exception:
-            st.error(
-                "Analysis failed. Check your API key and "
-                "Groq account, then try again."
-            )
+        except Exception as e:
+            st.error(f"Analysis failed: {e}")
+            
