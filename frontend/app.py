@@ -1,6 +1,6 @@
 
 import streamlit as st
-import requests
+from groq import Groq
 
 st.set_page_config(
     page_title="Sentiment Analyzer",
@@ -8,7 +8,9 @@ st.set_page_config(
 )
 
 st.title("💬 AI Sentiment Analyzer")
-st.write("Enter text below to analyze its sentiment using Mistral AI.")
+st.write(
+    "Analyze text sentiment using a hosted AI model."
+)
 
 text = st.text_area(
     "Enter your text:",
@@ -19,22 +21,51 @@ text = st.text_area(
 if st.button("Analyze Sentiment"):
     if not text.strip():
         st.warning("Please enter some text first.")
+
+    elif "GROQ_API_KEY" not in st.secrets:
+        st.error(
+            "API key missing. Add GROQ_API_KEY "
+            "in your Streamlit Cloud Secrets settings."
+        )
+
     else:
         try:
+            client = Groq(
+                api_key=st.secrets["GROQ_API_KEY"]
+            )
+
             with st.spinner("Analyzing sentiment..."):
-                response = requests.post(
-                    "http://127.0.0.1:8000/analyze/",
-                    data={"text": text},
-                    timeout=130
+                response = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "Classify the user's text as "
+                                "Positive, Negative, or Neutral. "
+                                "Return exactly one of those labels."
+                            )
+                        },
+                        {
+                            "role": "user",
+                            "content": text
+                        }
+                    ],
+                    temperature=0
                 )
-                response.raise_for_status()
-                result = response.json()["sentiment"]
 
-            st.subheader("Result")
-            st.success(result)
+            result = (
+                response.choices[0].message.content.strip()
+            )
 
-        except requests.exceptions.RequestException:
+            if result not in ["Positive", "Negative", "Neutral"]:
+                st.error("The model returned an unexpected result.")
+            else:
+                st.subheader("Result")
+                st.success(result)
+
+        except Exception:
             st.error(
-                "Could not reach the backend. "
-                "Make sure the backend server is running."
+                "Analysis failed. Check your API key and "
+                "Groq account, then try again."
             )
